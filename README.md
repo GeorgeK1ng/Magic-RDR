@@ -34,6 +34,20 @@ Some features are only supported for the Xbox version which was the main target 
 - OAleex
 - BadassBaboon
 
+## GitHub Actions builds
+
+The workflow restores normal dependencies, including the .NET Framework-compatible
+HelixToolkit.Wpf 2.x package, from NuGet. It automatically obtains `PikIO.dll` and
+the remaining non-NuGet runtime DLLs from the canonical `Foxxyyy/Magic-RDR`
+application release. Forks therefore do not need their own release, repository
+variable, secret, or manually uploaded dependency bundle. Successful runs publish
+a `MagicRDR-<commit>-x86` artifact.
+
+After changing this workflow, start a new run from the latest commit. GitHub's
+**Re-run jobs** button executes the workflow definition stored with the original
+commit, so re-running an older failed job may still show the removed
+`gh release download` step.
+
 # Random Pictures
 ![Screenshot](Magic_RDR/Resources/example_audio_player.png)
 ![Screenshot](Magic_RDR/Resources/example_model_viewer_1.png)

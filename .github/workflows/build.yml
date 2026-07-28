@@ -1,0 +1,81 @@
+name: Build Magic RDR
+run-name: Build ${{ github.event.pull_request.head.sha || github.sha }} (Release x86)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Release x86
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          $nuget = Join-Path $env:RUNNER_TEMP 'nuget.exe'
+          Invoke-WebRequest 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nuget
+          & $nuget restore Magic_RDR.sln -PackagesDirectory packages -NonInteractive
+
+      - name: Restore legacy assemblies from upstream
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-upstream'
+          $extractDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-upstream-extracted'
+          New-Item -ItemType Directory -Force -Path $downloadDir, $extractDir | Out-Null
+
+          # The original project distributes PikIO and the other non-NuGet DLLs
+          # with its application release. Always use that canonical upstream
+          # release instead of assuming that every fork has created a release.
+          gh release download --repo Foxxyyy/Magic-RDR --pattern '*.zip' --dir $downloadDir
+          Get-ChildItem $downloadDir -Filter '*.zip' | ForEach-Object {
+            Expand-Archive -LiteralPath $_.FullName -DestinationPath $extractDir -Force
+          }
+
+          $assemblyDir = Get-ChildItem $extractDir -Directory -Recurse |
+            Where-Object Name -eq 'Assemblies' |
+            Select-Object -First 1
+          if (-not $assemblyDir) {
+            throw 'The upstream Magic RDR release does not contain an Assemblies directory.'
+          }
+
+          $referenceDir = 'Magic_RDR/bin/x86/Debug/Assemblies'
+          New-Item -ItemType Directory -Force -Path $referenceDir | Out-Null
+          Copy-Item (Join-Path $assemblyDir.FullName '*') $referenceDir -Recurse -Force
+
+      - name: Build solution
+        run: >-
+          msbuild Magic_RDR.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=x86
+          /p:RestorePackages=false
+          /verbosity:minimal
+
+      - name: Include runtime assemblies
+        shell: pwsh
+        run: |
+          $outputAssemblies = 'Magic_RDR/bin/x86/Release/Assemblies'
+          New-Item -ItemType Directory -Force -Path $outputAssemblies | Out-Null
+          Copy-Item 'Magic_RDR/bin/x86/Debug/Assemblies/*' $outputAssemblies -Recurse -Force
+
+      - name: Upload application
+        uses: actions/upload-artifact@v4
+        with:
+          name: MagicRDR-${{ github.sha }}-x86
+          path: Magic_RDR/bin/x86/Release/
+          if-no-files-found: error
+          retention-days: 30
