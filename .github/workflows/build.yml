@@ -20,11 +20,37 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Add NuGet to PATH
-        uses: NuGet/setup-nuget@v2
-
       - name: Restore NuGet packages
-        run: nuget restore Magic_RDR.sln -PackagesDirectory packages -NonInteractive
+        shell: pwsh
+        run: |
+          $nuget = Join-Path $env:RUNNER_TEMP 'nuget.exe'
+          Invoke-WebRequest 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nuget
+          & $nuget restore Magic_RDR.sln -PackagesDirectory packages -NonInteractive
+
+      - name: Restore legacy assemblies from the latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-release'
+          $extractDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-release-extracted'
+          New-Item -ItemType Directory -Force -Path $downloadDir, $extractDir | Out-Null
+
+          gh release download --repo $env:GITHUB_REPOSITORY --pattern '*.zip' --dir $downloadDir
+          Get-ChildItem $downloadDir -Filter '*.zip' | ForEach-Object {
+            Expand-Archive -LiteralPath $_.FullName -DestinationPath $extractDir -Force
+          }
+
+          $assemblyDir = Get-ChildItem $extractDir -Directory -Recurse |
+            Where-Object Name -eq 'Assemblies' |
+            Select-Object -First 1
+          if (-not $assemblyDir) {
+            throw 'The latest release does not contain an Assemblies directory.'
+          }
+
+          $referenceDir = 'Magic_RDR/bin/x86/Debug/Assemblies'
+          New-Item -ItemType Directory -Force -Path $referenceDir | Out-Null
+          Copy-Item (Join-Path $assemblyDir.FullName '*') $referenceDir -Recurse -Force
 
       - name: Build solution
         run: >-
@@ -34,6 +60,13 @@ jobs:
           /p:Platform=x86
           /p:RestorePackages=false
           /verbosity:minimal
+
+      - name: Include runtime assemblies
+        shell: pwsh
+        run: |
+          $outputAssemblies = 'Magic_RDR/bin/x86/Release/Assemblies'
+          New-Item -ItemType Directory -Force -Path $outputAssemblies | Out-Null
+          Copy-Item 'Magic_RDR/bin/x86/Debug/Assemblies/*' $outputAssemblies -Recurse -Force
 
       - name: Upload application
         uses: actions/upload-artifact@v4
