@@ -51,6 +51,11 @@ dependency directory must still include `PikIO.dll` and the other non-NuGet DLLs
 distributed in the application's `Assemblies` directory. Successful runs publish
 a `MagicRDR-<commit>-x86` artifact.
 
+After changing this workflow, start a new run from the latest commit. GitHub's
+**Re-run jobs** button executes the workflow definition stored with the original
+commit, so re-running an older failed job may still show the removed
+`gh release download` step.
+
 # Random Pictures
 ![Screenshot](Magic_RDR/Resources/example_audio_player.png)
 ![Screenshot](Magic_RDR/Resources/example_model_viewer_1.png)

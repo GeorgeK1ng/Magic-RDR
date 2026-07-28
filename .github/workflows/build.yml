@@ -1,4 +1,5 @@
 name: Build Magic RDR
+run-name: Build ${{ github.event.pull_request.head.sha || github.sha }} (Release x86)
 
 on:
   push:
