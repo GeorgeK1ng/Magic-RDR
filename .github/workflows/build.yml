@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      legacy_assemblies_url:
+        description: URL of a ZIP containing the legacy Assemblies directory
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -27,25 +32,33 @@ jobs:
           Invoke-WebRequest 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nuget
           & $nuget restore Magic_RDR.sln -PackagesDirectory packages -NonInteractive
 
-      - name: Restore legacy assemblies from the latest release
+      - name: Restore legacy assemblies
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
+          LEGACY_ASSEMBLIES_URL: ${{ inputs.legacy_assemblies_url || vars.LEGACY_ASSEMBLIES_URL }}
         run: |
-          $downloadDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-release'
-          $extractDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-release-extracted'
-          New-Item -ItemType Directory -Force -Path $downloadDir, $extractDir | Out-Null
-
-          gh release download --repo $env:GITHUB_REPOSITORY --pattern '*.zip' --dir $downloadDir
-          Get-ChildItem $downloadDir -Filter '*.zip' | ForEach-Object {
-            Expand-Archive -LiteralPath $_.FullName -DestinationPath $extractDir -Force
-          }
-
-          $assemblyDir = Get-ChildItem $extractDir -Directory -Recurse |
-            Where-Object Name -eq 'Assemblies' |
-            Select-Object -First 1
+          $assemblyDir = Get-Item 'Dependencies/Assemblies' -ErrorAction SilentlyContinue
           if (-not $assemblyDir) {
-            throw 'The latest release does not contain an Assemblies directory.'
+            if ([string]::IsNullOrWhiteSpace($env:LEGACY_ASSEMBLIES_URL)) {
+              throw @'
+          Legacy assemblies are unavailable. Either commit them under
+          Dependencies/Assemblies or set the repository variable
+          LEGACY_ASSEMBLIES_URL to a ZIP download URL. The ZIP must contain an
+          Assemblies directory with HelixToolkit.Wpf.dll, PikIO.dll and the other
+          runtime dependencies.
+          '@
+            }
+
+            $archive = Join-Path $env:RUNNER_TEMP 'magic-rdr-assemblies.zip'
+            $extractDir = Join-Path $env:RUNNER_TEMP 'magic-rdr-assemblies'
+            Invoke-WebRequest $env:LEGACY_ASSEMBLIES_URL -OutFile $archive
+            Expand-Archive -LiteralPath $archive -DestinationPath $extractDir -Force
+            $assemblyDir = Get-ChildItem $extractDir -Directory -Recurse |
+              Where-Object Name -eq 'Assemblies' |
+              Select-Object -First 1
+            if (-not $assemblyDir) {
+              throw 'The dependency ZIP does not contain an Assemblies directory.'
+            }
           }
 
           $referenceDir = 'Magic_RDR/bin/x86/Debug/Assemblies'
