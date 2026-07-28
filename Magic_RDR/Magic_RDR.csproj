@@ -96,8 +96,8 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="HelixToolkit.Wpf">
-      <HintPath>bin\x86\Debug\Assemblies\HelixToolkit.Wpf.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\packages\HelixToolkit.Wpf.2.27.0\lib\net462\HelixToolkit.Wpf.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>bin\x86\Debug\Assemblies\ICSharpCode.SharpZipLib.dll</HintPath>

@@ -44,8 +44,8 @@ jobs:
           Legacy assemblies are unavailable. Either commit them under
           Dependencies/Assemblies or set the repository variable
           LEGACY_ASSEMBLIES_URL to a ZIP download URL. The ZIP must contain an
-          Assemblies directory with HelixToolkit.Wpf.dll, PikIO.dll and the other
-          runtime dependencies.
+          Assemblies directory with PikIO.dll and the other legacy runtime
+          dependencies which are not restored from NuGet.
           '@
             }
 

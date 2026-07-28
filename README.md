@@ -44,9 +44,12 @@ them using either of these methods:
    value is a direct URL to a ZIP containing an `Assemblies` directory.
 
 The same URL can be supplied temporarily when starting the **Build Magic RDR**
-workflow manually. The dependency directory must include `HelixToolkit.Wpf.dll`,
-`PikIO.dll`, and the other DLLs distributed in the application's `Assemblies`
-directory. Successful runs publish a `MagicRDR-<commit>-x86` artifact.
+workflow manually. HelixToolkit is restored directly from NuGet; do not use the
+HelixToolkit 3.x build-artifacts ZIP because this application targets .NET
+Framework 4.8 and uses the compatible HelixToolkit.Wpf 2.x package. The legacy
+dependency directory must still include `PikIO.dll` and the other non-NuGet DLLs
+distributed in the application's `Assemblies` directory. Successful runs publish
+a `MagicRDR-<commit>-x86` artifact.
 
 # Random Pictures
 ![Screenshot](Magic_RDR/Resources/example_audio_player.png)
