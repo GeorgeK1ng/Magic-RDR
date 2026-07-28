@@ -36,19 +36,11 @@ Some features are only supported for the Xbox version which was the main target 
 
 ## GitHub Actions builds
 
-The Windows build needs legacy DLLs which are not available from NuGet. Provide
-them using either of these methods:
-
-1. Add the runtime DLLs under `Dependencies/Assemblies` in the repository; or
-2. Create an Actions repository variable named `LEGACY_ASSEMBLIES_URL` whose
-   value is a direct URL to a ZIP containing an `Assemblies` directory.
-
-The same URL can be supplied temporarily when starting the **Build Magic RDR**
-workflow manually. HelixToolkit is restored directly from NuGet; do not use the
-HelixToolkit 3.x build-artifacts ZIP because this application targets .NET
-Framework 4.8 and uses the compatible HelixToolkit.Wpf 2.x package. The legacy
-dependency directory must still include `PikIO.dll` and the other non-NuGet DLLs
-distributed in the application's `Assemblies` directory. Successful runs publish
+The workflow restores normal dependencies, including the .NET Framework-compatible
+HelixToolkit.Wpf 2.x package, from NuGet. It automatically obtains `PikIO.dll` and
+the remaining non-NuGet runtime DLLs from the canonical `Foxxyyy/Magic-RDR`
+application release. Forks therefore do not need their own release, repository
+variable, secret, or manually uploaded dependency bundle. Successful runs publish
 a `MagicRDR-<commit>-x86` artifact.
 
 After changing this workflow, start a new run from the latest commit. GitHub's
